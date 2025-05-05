@@ -26,7 +26,5 @@ export const useAuth = () => {
 };
 
 export const logout = async () => {
-
-    await signOut(auth)
-
+    await signOut(auth);
 }
