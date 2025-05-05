@@ -5,11 +5,17 @@ import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, query, where } 
 import { db } from "../../lib/firebase"; // Certifique-se de configurar o Firebase corretamente
 import { useAuth } from "../../lib/firebaseauth";
 
+interface SubTask {
+    id: string;
+    name: string;
+    completed: boolean;
+}
+
 interface Task {
     id: string;
     title: string;
     completed: boolean;
-    activities: { name: string; completed: boolean }[];
+    subtasks: SubTask[];
 }
 
 export default function TaskPage() {
@@ -40,40 +46,97 @@ export default function TaskPage() {
         const docRef = await addDoc(collection(db, "tasks"), {
             title: newTaskTitle,
             completed: false,
-            activities: [],
+            subtasks: [],
             uid: user?.uid, // Vincula a tarefa ao usuário logado
         });
-        setTasks([...tasks, { id: docRef.id, title: newTaskTitle, completed: false, activities: [] }]);
+        setTasks([...tasks, { id: docRef.id, title: newTaskTitle, completed: false, subtasks: [] }]);
         setNewTaskTitle("");
     };
 
-    // Marcar tarefa como concluída
-    const handleToggleComplete = async (taskId: string, completed: boolean) => {
+    // Adicionar subtarefa
+    const handleAddSubTask = async (taskId: string, subTaskName: string) => {
+        if (!subTaskName.trim()) return;
+        const updatedTasks = tasks.map((task) => {
+            if (task.id === taskId) {
+                const newSubTask = { id: Date.now().toString(), name: subTaskName, completed: false };
+                return { ...task, subtasks: [...task.subtasks, newSubTask] };
+            }
+            return task;
+        });
+        setTasks(updatedTasks);
         const taskRef = doc(db, "tasks", taskId);
-        await updateDoc(taskRef, { completed: !completed });
-        setTasks(tasks.map((task) => (task.id === taskId ? { ...task, completed: !completed } : task)));
+        await updateDoc(taskRef, { subtasks: updatedTasks.find((task) => task.id === taskId)?.subtasks });
     };
 
-    // Excluir tarefa
-    const handleDeleteTask = async (taskId: string) => {
+    // Marcar subtarefa como concluída
+    const handleToggleSubTask = async (taskId: string, subTaskId: string) => {
+        const updatedTasks = tasks.map((task) => {
+            if (task.id === taskId) {
+                const updatedSubTasks = task.subtasks.map((subTask) =>
+                    subTask.id === subTaskId ? { ...subTask, completed: !subTask.completed } : subTask
+                );
+                return { ...task, subtasks: updatedSubTasks };
+            }
+            return task;
+        });
+        setTasks(updatedTasks);
         const taskRef = doc(db, "tasks", taskId);
-        await deleteDoc(taskRef);
-        setTasks(tasks.filter((task) => task.id !== taskId));
+        await updateDoc(taskRef, { subtasks: updatedTasks.find((task) => task.id === taskId)?.subtasks });
     };
 
     // Editar tarefa
-    const handleEditTask = async (taskId: string, newTitle: string) => {
-        if (!newTitle.trim()) return;
-        const taskRef = doc(db, "tasks", taskId);
+    const handleEditTask = async (id: string, newTitle: string) => {
+        const updatedTasks = tasks.map((task) =>
+            task.id === id ? { ...task, title: newTitle } : task
+        );
+        setTasks(updatedTasks);
+        const taskRef = doc(db, "tasks", id);
         await updateDoc(taskRef, { title: newTitle });
-        setTasks(tasks.map((task) => (task.id === taskId ? { ...task, title: newTitle } : task)));
     };
 
-    // Calcular percentual geral de tarefas concluídas
-    const calculateOverallCompletionPercentage = () => {
-        if (tasks.length === 0) return 0;
-        const completedTasks = tasks.filter((task) => task.completed).length;
-        return Math.round((completedTasks / tasks.length) * 100);
+    // Apagar tarefa
+    const handleDeleteTask = async (id: string) => {
+        const updatedTasks = tasks.filter((task) => task.id !== id);
+        setTasks(updatedTasks);
+        const taskRef = doc(db, "tasks", id);
+        await deleteDoc(taskRef);
+    };
+
+    // Editar subtarefa
+    const handleEditSubTask = async (taskId: string, subTaskId: string, newName: string) => {
+        const updatedTasks = tasks.map((task) => {
+            if (task.id === taskId) {
+                const updatedSubTasks = task.subtasks.map((subTask) =>
+                    subTask.id === subTaskId ? { ...subTask, name: newName } : subTask
+                );
+                return { ...task, subtasks: updatedSubTasks };
+            }
+            return task;
+        });
+        setTasks(updatedTasks);
+        const taskRef = doc(db, "tasks", taskId);
+        await updateDoc(taskRef, { subtasks: updatedTasks.find((task) => task.id === taskId)?.subtasks });
+    };
+
+    // Apagar subtarefa
+    const handleDeleteSubTask = async (taskId: string, subTaskId: string) => {
+        const updatedTasks = tasks.map((task) => {
+            if (task.id === taskId) {
+                const updatedSubTasks = task.subtasks.filter((subTask) => subTask.id !== subTaskId);
+                return { ...task, subtasks: updatedSubTasks };
+            }
+            return task;
+        });
+        setTasks(updatedTasks);
+        const taskRef = doc(db, "tasks", taskId);
+        await updateDoc(taskRef, { subtasks: updatedTasks.find((task) => task.id === taskId)?.subtasks });
+    };
+
+    // Calcular percentual de conclusão de subtarefas
+    const calculateSubTaskCompletionPercentage = (subtasks: SubTask[]) => {
+        if (subtasks.length === 0) return 0;
+        const completedSubTasks = subtasks.filter((subTask) => subTask.completed).length;
+        return Math.round((completedSubTasks / subtasks.length) * 100);
     };
 
     if (loading) {
@@ -90,6 +153,15 @@ export default function TaskPage() {
             </div>
         );
     }
+
+    const handleToggleComplete = async (id: string, completed: boolean) => {
+        const updatedTasks = tasks.map((task) =>
+            task.id === id ? { ...task, completed: !completed } : task
+        );
+        setTasks(updatedTasks);
+        const taskRef = doc(db, "tasks", id);
+        await updateDoc(taskRef, { completed: !completed });
+    };
 
     return (
         <div className="h-screen flex flex-col items-center justify-center bg-gray-200 p-4">
@@ -112,26 +184,17 @@ export default function TaskPage() {
                 </div>
                 <ul>
                     {tasks.map((task) => (
-                        <li
-                            key={task.id}
-                            className="flex flex-col p-2 border-b"
-                        >
+                        <li key={task.id} className="flex flex-col p-2 border-b">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <input
-                                        type="checkbox"
-                                        checked={task.completed}
-                                        onChange={() => handleToggleComplete(task.id, task.completed)}
-                                        className="mr-2"
-                                    />
                                     {task.title}
                                 </div>
-                                <div className="flex items-center">
+                                <div className="flex gap-2">
                                     <button
-                                        className="text-blue-500 mr-2"
+                                        className="text-blue-500"
                                         onClick={() => {
                                             const newTitle = prompt("Editar tarefa:", task.title);
-                                            if (newTitle !== null) {
+                                            if (newTitle) {
                                                 handleEditTask(task.id, newTitle);
                                             }
                                         }}
@@ -142,27 +205,71 @@ export default function TaskPage() {
                                         className="text-red-500"
                                         onClick={() => handleDeleteTask(task.id)}
                                     >
-                                        Excluir
+                                        Apagar
+                                    </button>
+                                    <button
+                                        className="text-green-500"
+                                        onClick={() => {
+                                            const subTaskName = prompt("Adicionar subtarefa:");
+                                            if (subTaskName) {
+                                                handleAddSubTask(task.id, subTaskName);
+                                            }
+                                        }}
+                                    >
+                                        + Subtarefa
                                     </button>
                                 </div>
                             </div>
+                            <div className="mt-2">
+                                <div className="w-full bg-gray-300 rounded h-4">
+                                    <div
+                                        className="bg-green-500 h-4 rounded"
+                                        style={{
+                                            width: `${calculateSubTaskCompletionPercentage(task.subtasks)}%`,
+                                        }}
+                                    ></div>
+                                </div>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    {calculateSubTaskCompletionPercentage(task.subtasks)}% concluído
+                                </p>
+                            </div>
+                            <ul className="mt-2">
+                                {task.subtasks.map((subTask) => (
+                                    <li key={subTask.id} className="flex items-center justify-between">
+                                        <div>
+                                            <input
+                                                type="checkbox"
+                                                checked={subTask.completed}
+                                                onChange={() => handleToggleSubTask(task.id, subTask.id)}
+                                                className="mr-2"
+                                            />
+                                            {subTask.name}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                className="text-blue-500"
+                                                onClick={() => {
+                                                    const newName = prompt("Editar subtarefa:", subTask.name);
+                                                    if (newName) {
+                                                        handleEditSubTask(task.id, subTask.id, newName);
+                                                    }
+                                                }}
+                                            >
+                                                Editar
+                                            </button>
+                                            <button
+                                                className="text-red-500"
+                                                onClick={() => handleDeleteSubTask(task.id, subTask.id)}
+                                            >
+                                                Apagar
+                                            </button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
                         </li>
                     ))}
                 </ul>
-                <div className="mt-4 text-center">
-                    <h2 className="text-lg font-bold">Progresso Geral</h2>
-                    <div className="w-full bg-gray-300 rounded h-4 mt-2">
-                        <div
-                            className="bg-green-500 h-4 rounded"
-                            style={{
-                                width: `${calculateOverallCompletionPercentage()}%`,
-                            }}
-                        ></div>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                        {calculateOverallCompletionPercentage()}% das tarefas concluídas
-                    </p>
-                </div>
             </div>
         </div>
     );
