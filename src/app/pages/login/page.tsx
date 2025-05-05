@@ -30,6 +30,19 @@ export default function Login() {
             const errorMessage = err instanceof Error ? err.message : "Erro ao fazer login. Tente novamente.";
             setError("Email ou senha inválidos.");
             toast.error(errorMessage);
+
+            // Mapeia os códigos de erro do Firebase para mensagens amigáveis
+            let errorMessage = "Erro ao fazer login. Tente novamente.";
+            if (err.code === "auth/user-not-found") {
+                errorMessage = "Usuário não encontrado. Verifique o email e tente novamente.";
+            } else if (err.code === "auth/wrong-password") {
+                errorMessage = "Senha incorreta. Tente novamente.";
+            } else if (err.code === "auth/invalid-email") {
+                errorMessage = "Email inválido. Verifique o formato do email.";
+            }
+
+            setError(errorMessage);
+            toast.error(errorMessage);
         }
     };
 

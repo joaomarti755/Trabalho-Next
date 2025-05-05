@@ -14,7 +14,6 @@ interface SubTask {
 interface Task {
     id: string;
     title: string;
-    completed: boolean;
     subtasks: SubTask[];
 }
 
@@ -45,11 +44,10 @@ export default function TaskPage() {
         if (!newTaskTitle.trim()) return;
         const docRef = await addDoc(collection(db, "tasks"), {
             title: newTaskTitle,
-            completed: false,
             subtasks: [],
             uid: user?.uid, // Vincula a tarefa ao usuário logado
         });
-        setTasks([...tasks, { id: docRef.id, title: newTaskTitle, completed: false, subtasks: [] }]);
+        setTasks([...tasks, { id: docRef.id, title: newTaskTitle, subtasks: [] }]);
         setNewTaskTitle("");
     };
 
@@ -154,15 +152,6 @@ export default function TaskPage() {
         );
     }
 
-    const handleToggleComplete = async (id: string, completed: boolean) => {
-        const updatedTasks = tasks.map((task) =>
-            task.id === id ? { ...task, completed: !completed } : task
-        );
-        setTasks(updatedTasks);
-        const taskRef = doc(db, "tasks", id);
-        await updateDoc(taskRef, { completed: !completed });
-    };
-
     return (
         <div className="h-screen flex flex-col items-center justify-center bg-gray-200 p-4">
             <div className="w-full max-w-md bg-white p-4 rounded shadow">
@@ -186,9 +175,7 @@ export default function TaskPage() {
                     {tasks.map((task) => (
                         <li key={task.id} className="flex flex-col p-2 border-b">
                             <div className="flex items-center justify-between">
-                                <div>
-                                    {task.title}
-                                </div>
+                                <div>{task.title}</div>
                                 <div className="flex gap-2">
                                     <button
                                         className="text-blue-500"
