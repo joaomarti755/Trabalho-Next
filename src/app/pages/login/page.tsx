@@ -23,10 +23,13 @@ export default function Login() {
             await signInWithEmailAndPassword(auth, email, password);
             toast.success("Login realizado com sucesso!");
             router.push("/task");
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Erro ao fazer login:", err);
+
+            // Verifica se o erro possui uma mensagem
+            const errorMessage = err instanceof Error ? err.message : "Erro ao fazer login. Tente novamente.";
             setError("Email ou senha inválidos.");
-            toast.error(err.message || "Erro ao fazer login. Tente novamente.");
+            toast.error(errorMessage);
         }
     };
 
