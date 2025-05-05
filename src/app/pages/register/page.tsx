@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from "@/app/lib/firebaseauth";
 import { handleAdd } from "@/app/utils/handlecollection";
 import { toast, ToastContainer } from "react-toastify";
+import { useRouter } from "next/navigation"; // Importa o hook useRouter
 import "react-toastify/dist/ReactToastify.css";
 
 export default function Register() {
@@ -15,6 +16,7 @@ export default function Register() {
     const [error, setError] = useState("");
 
     const { user, loading } = useAuth();
+    const router = useRouter(); // Inicializa o hook useRouter
 
     if (loading) {
         return <div>Carregando...</div>;
@@ -46,6 +48,9 @@ export default function Register() {
                 senha: password,
             });
             toast.success("Usuário registrado com sucesso!");
+
+            // Redireciona para a página inicial após o registro
+            router.push("/");
         } catch (err) {
             console.error("Erro ao registrar o usuário:", err);
             setError("Erro ao registrar o usuário. Tente novamente.");
