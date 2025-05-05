@@ -25,8 +25,19 @@ export default function Login() {
             router.push("/task");
         } catch (err: any) {
             console.error("Erro ao fazer login:", err);
-            setError("Email ou senha inválidos.");
-            toast.error(err.message || "Erro ao fazer login. Tente novamente.");
+
+            // Mapeia os códigos de erro do Firebase para mensagens amigáveis
+            let errorMessage = "Erro ao fazer login. Tente novamente.";
+            if (err.code === "auth/user-not-found") {
+                errorMessage = "Usuário não encontrado. Verifique o email e tente novamente.";
+            } else if (err.code === "auth/wrong-password") {
+                errorMessage = "Senha incorreta. Tente novamente.";
+            } else if (err.code === "auth/invalid-email") {
+                errorMessage = "Email inválido. Verifique o formato do email.";
+            }
+
+            setError(errorMessage);
+            toast.error(errorMessage);
         }
     };
 
