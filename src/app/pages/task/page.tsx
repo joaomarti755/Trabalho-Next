@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, updateDoc, doc, deleteDoc, query, where } from "firebase/firestore";
 import { db } from "../../lib/firebase"; // Certifique-se de configurar o Firebase corretamente
 import { useAuth } from "../../lib/firebaseauth";
 
@@ -12,31 +12,36 @@ interface Task {
     activities: { name: string; completed: boolean }[];
 }
 
-export default function Register() {
+export default function TaskPage() {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [newTaskTitle, setNewTaskTitle] = useState("");
     const { user, loading } = useAuth();
 
-    // Carregar tarefas do Firestore
+    // Carregar tarefas do Firestore vinculadas ao usuário logado
     useEffect(() => {
+        if (!user) return;
+
         const fetchTasks = async () => {
-            const querySnapshot = await getDocs(collection(db, "tasks"));
+            const tasksQuery = query(collection(db, "tasks"), where("uid", "==", user.uid)); // Filtra pelo uid do usuário
+            const querySnapshot = await getDocs(tasksQuery);
             const tasksData = querySnapshot.docs.map((doc) => ({
                 id: doc.id,
                 ...doc.data(),
             })) as Task[];
             setTasks(tasksData);
         };
-        fetchTasks();
-    }, []);
 
-    // Adicionar nova tarefa
+        fetchTasks();
+    }, [user]);
+
+    // Adicionar nova tarefa vinculada ao usuário logado
     const handleAddTask = async () => {
         if (!newTaskTitle.trim()) return;
         const docRef = await addDoc(collection(db, "tasks"), {
             title: newTaskTitle,
             completed: false,
             activities: [],
+            uid: user?.uid, // Vincula a tarefa ao usuário logado
         });
         setTasks([...tasks, { id: docRef.id, title: newTaskTitle, completed: false, activities: [] }]);
         setNewTaskTitle("");

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from 'next/link';
+import { useAuth } from "@/app/lib/firebaseauth";
 import { handleAdd } from "@/app/utils/handlecollection";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -13,6 +14,23 @@ export default function Register() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [error, setError] = useState("");
 
+    const { user, loading } = useAuth();
+
+    if (loading) {
+        return <div>Carregando...</div>;
+    }
+
+    if (user) {
+        return (
+            <div className="h-screen flex flex-col items-center justify-center bg-gray-200 p-4">
+                <h1 className="text-xl font-bold">Acesso negado</h1>
+                <p className="text-gray-700 mt-2">
+                    Você já está logado. Caso queira registrar uma nova conta, saia primeiro.
+                </p>
+            </div>
+        );
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (password !== confirmPassword) {
@@ -20,7 +38,7 @@ export default function Register() {
             return;
         }
         setError("");
-    
+
         try {
             await handleAdd({
                 nome: username,
@@ -28,12 +46,6 @@ export default function Register() {
                 senha: password,
             });
             toast.success("Usuário registrado com sucesso!");
-    
-            // Reseta os inputs
-            setUsername("");
-            setEmail("");
-            setPassword("");
-            setConfirmPassword("");
         } catch (err) {
             console.error("Erro ao registrar o usuário:", err);
             setError("Erro ao registrar o usuário. Tente novamente.");
