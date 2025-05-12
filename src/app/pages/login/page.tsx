@@ -25,20 +25,12 @@ export default function Login() {
             await signInWithEmailAndPassword(auth, email, password);
             toast.success("Login realizado com sucesso!");
             router.push("/task");
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error("Erro ao fazer login:", err);
 
-            // Mapeia os códigos de erro do Firebase para mensagens amigáveis
-            let errorMessage = "Erro ao fazer login. Tente novamente.";
-            if (err.code === "auth/user-not-found") {
-                errorMessage = "Usuário não encontrado. Verifique o email e tente novamente.";
-            } else if (err.code === "auth/wrong-password") {
-                errorMessage = "Senha incorreta. Tente novamente.";
-            } else if (err.code === "auth/invalid-email") {
-                errorMessage = "Email inválido. Verifique o formato do email.";
-            }
-
-            setError(errorMessage);
+            // Verifica se o erro possui uma mensagem
+            const errorMessage = err instanceof Error ? err.message : "Erro ao fazer login. Tente novamente.";
+            setError("Email ou senha inválidos.");
             toast.error(errorMessage);
         }
     };
