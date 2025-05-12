@@ -5,10 +5,11 @@ import Link from "next/link";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { auth } from "@/app/lib/firebase";
-import { signInWithEmailAndPassword, GithubAuthProvider, signInWithPopup } from "firebase/auth";
+import { signInWithEmailAndPassword, GithubAuthProvider, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
 const githubProvider = new GithubAuthProvider();
+const googleProvider = new GoogleAuthProvider();
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -25,12 +26,20 @@ export default function Login() {
             await signInWithEmailAndPassword(auth, email, password);
             toast.success("Login realizado com sucesso!");
             router.push("/task");
-        } catch (err: unknown) {
+        } catch (err: any) {
             console.error("Erro ao fazer login:", err);
 
-            // Verifica se o erro possui uma mensagem
-            const errorMessage = err instanceof Error ? err.message : "Erro ao fazer login. Tente novamente.";
-            setError("Email ou senha inválidos.");
+            // Mapeia os códigos de erro do Firebase para mensagens amigáveis
+            let errorMessage = "Erro ao fazer login. Tente novamente.";
+            if (err.code === "auth/user-not-found") {
+                errorMessage = "Usuário não encontrado. Verifique o email e tente novamente.";
+            } else if (err.code === "auth/wrong-password") {
+                errorMessage = "Senha incorreta. Tente novamente.";
+            } else if (err.code === "auth/invalid-email") {
+                errorMessage = "Email inválido. Verifique o formato do email.";
+            }
+
+            setError(errorMessage);
             toast.error(errorMessage);
         }
     };
@@ -43,6 +52,17 @@ export default function Login() {
         } catch (error: any) {
             console.error("Erro ao fazer login com GitHub:", error);
             toast.error("Erro ao fazer login com GitHub. Tente novamente.");
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        try {
+            await signInWithPopup(auth, googleProvider);
+            toast.success("Login com Google realizado com sucesso!");
+            router.push("/task");
+        } catch (error: any) {
+            console.error("Erro ao fazer login com Google:", error);
+            toast.error("Erro ao fazer login com Google. Tente novamente.");
         }
     };
 
@@ -85,9 +105,15 @@ export default function Login() {
                 <div className="mt-4">
                     <button
                         onClick={handleGitHubLogin}
-                        className="w-full bg-gray-800 text-white py-2 rounded-md hover:bg-gray-900 transform transition-transform duration-200 hover:scale-105"
+                        className="w-full bg-gray-800 text-white py-2 rounded-md hover:bg-gray-900 transform transition-transform duration-200 hover:scale-105 mb-2"
                     >
                         Entrar com GitHub
+                    </button>
+                    <button
+                        onClick={handleGoogleLogin}
+                        className="w-full bg-red-500 text-white py-2 rounded-md hover:bg-red-600 transform transition-transform duration-200 hover:scale-105"
+                    >
+                        Entrar com Google
                     </button>
                 </div>
                 <p className="mt-4 text-sm text-white">
