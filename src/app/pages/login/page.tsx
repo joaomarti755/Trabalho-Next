@@ -5,8 +5,10 @@ import Link from "next/link";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { auth } from "@/app/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, GithubAuthProvider, signInWithPopup } from "firebase/auth";
 import { useRouter } from "next/navigation";
+
+const githubProvider = new GithubAuthProvider();
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -38,6 +40,17 @@ export default function Login() {
 
             setError(errorMessage);
             toast.error(errorMessage);
+        }
+    };
+
+    const handleGitHubLogin = async () => {
+        try {
+            await signInWithPopup(auth, githubProvider);
+            toast.success("Login com GitHub realizado com sucesso!");
+            router.push("/task");
+        } catch (error: any) {
+            console.error("Erro ao fazer login com GitHub:", error);
+            toast.error("Erro ao fazer login com GitHub. Tente novamente.");
         }
     };
 
@@ -77,6 +90,14 @@ export default function Login() {
                         Entrar
                     </button>
                 </form>
+                <div className="mt-4">
+                    <button
+                        onClick={handleGitHubLogin}
+                        className="w-full bg-gray-800 text-white py-2 rounded-md hover:bg-gray-900 transform transition-transform duration-200 hover:scale-105"
+                    >
+                        Entrar com GitHub
+                    </button>
+                </div>
                 <p className="mt-4 text-sm text-white">
                     Não possuo uma conta!{" "}
                     <Link href="/register" className="text-blue-500 hover:underline">
